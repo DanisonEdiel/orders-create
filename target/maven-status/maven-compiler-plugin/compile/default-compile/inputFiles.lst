@@ -1,0 +1,17 @@
+C:\java\orders-creator\src\main\java\com\example\ordercreator\security\UserPrincipal.java
+C:\java\orders-creator\src\main\java\com\example\ordercreator\dto\CreateOrderRequest.java
+C:\java\orders-creator\src\main\java\com\example\ordercreator\dto\TokenValidationRequest.java
+C:\java\orders-creator\src\main\java\com\example\ordercreator\dto\TokenValidationResponse.java
+C:\java\orders-creator\src\main\java\com\example\ordercreator\OrderCreatorApplication.java
+C:\java\orders-creator\src\main\java\com\example\ordercreator\repository\OrderRepository.java
+C:\java\orders-creator\src\main\java\com\example\ordercreator\domain\Order.java
+C:\java\orders-creator\src\main\java\com\example\ordercreator\client\AuthServiceClient.java
+C:\java\orders-creator\src\main\java\com\example\ordercreator\service\OrderService.java
+C:\java\orders-creator\src\main\java\com\example\ordercreator\controller\OrderController.java
+C:\java\orders-creator\src\main\java\com\example\ordercreator\event\OrderEventPublisher.java
+C:\java\orders-creator\src\main\java\com\example\ordercreator\domain\OrderItem.java
+C:\java\orders-creator\src\main\java\com\example\ordercreator\config\JacksonConfig.java
+C:\java\orders-creator\src\main\java\com\example\ordercreator\service\AuthenticationService.java
+C:\java\orders-creator\src\main\java\com\example\ordercreator\config\AwsConfig.java
+C:\java\orders-creator\src\main\java\com\example\ordercreator\config\SecurityConfig.java
+C:\java\orders-creator\src\main\java\com\example\ordercreator\security\JwtAuthenticationFilter.java

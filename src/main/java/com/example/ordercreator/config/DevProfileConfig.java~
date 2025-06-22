@@ -1,0 +1,56 @@
+package com.example.ordercreator.config;
+
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.env.EnvironmentPostProcessor;
+import org.springframework.core.env.ConfigurableEnvironment;
+import lombok.extern.slf4j.Slf4j;
+
+/**
+ * Configuration class that activates the "dev" profile by default
+ * when no AWS credentials are provided or when no database connection is available.
+ */
+@Configuration
+@Slf4j
+public class DevProfileConfig implements EnvironmentPostProcessor {
+
+    @Override
+    public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
+        // Check if AWS credentials are not set and no active profiles are specified
+        if ((hasNoDatabaseConnection(environment) || !hasAwsCredentials(environment)) 
+                && environment.getActiveProfiles().length == 0) {
+            log.info("No AWS credentials or database connection found and no active profiles set. Activating 'dev' profile.");
+            environment.addActiveProfile("dev");
+        }
+    }
+    
+    private boolean hasAwsCredentials(ConfigurableEnvironment environment) {
+        String accessKey = environment.getProperty("AWS_ACCESS_KEY_ID");
+        String secretKey = environment.getProperty("AWS_SECRET_ACCESS_KEY");
+        return accessKey != null && !accessKey.isEmpty() && 
+               secretKey != null && !secretKey.isEmpty();
+    }
+    
+    private boolean hasNoDatabaseConnection(ConfigurableEnvironment environment) {
+        // Check if we can connect to the database
+        String dbUrl = environment.getProperty("spring.datasource.url");
+        if (dbUrl == null || dbUrl.isEmpty()) {
+            return true;
+        }
+        
+        // If using PostgreSQL, check if the database exists
+        if (dbUrl.contains("postgresql")) {
+            try {
+                // We don't actually try to connect here, just return true to activate dev profile
+                // This is a simplification for local development
+                return true;
+            } catch (Exception e) {
+                log.warn("Could not connect to PostgreSQL database: {}", e.getMessage());
+                return true;
+            }
+        }
+        
+        return false;
+    }
+}

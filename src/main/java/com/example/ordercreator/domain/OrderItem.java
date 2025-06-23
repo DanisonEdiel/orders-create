@@ -2,6 +2,7 @@ package com.example.ordercreator.domain;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 import java.math.BigDecimal;
@@ -32,6 +33,7 @@ public class OrderItem {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id")
+    @EqualsAndHashCode.Exclude
     private Order order;
 
     public OrderItem setOrder(Order order) {

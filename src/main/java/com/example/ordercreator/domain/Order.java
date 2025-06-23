@@ -2,7 +2,9 @@ package com.example.ordercreator.domain;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 import lombok.experimental.Accessors;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -37,6 +39,8 @@ public class Order {
     private String orderId;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Set<OrderItem> items = new HashSet<>();
 
     public Order(String userId) {

@@ -54,7 +54,10 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
-          timeout: 120s
+          timeout: 180s
+          command_timeout: 20m
+          script_stop: true
+          debug: true
           script: |
             cd ~/orders-creator
             

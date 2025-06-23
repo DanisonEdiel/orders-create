@@ -5,9 +5,9 @@ services:
     image: postgres:14
     container_name: orders-db
     environment:
-      POSTGRES_DB: orders_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${DB_NAME:-orders-db}
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
     ports:
       - "5432:5432"
     volumes:
@@ -50,15 +50,15 @@ services:
     volumes:
       - grafana-data:/var/lib/grafana
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_INSTALL_PLUGINS=grafana-postgresql-datasource
       # Direct PostgreSQL connection for metrics
       - GF_DATABASE_TYPE=postgres
       - GF_DATABASE_HOST=postgres
-      - GF_DATABASE_NAME=orders_db
-      - GF_DATABASE_USER=postgres
-      - GF_DATABASE_PASSWORD=postgres
+      - GF_DATABASE_NAME=${DB_NAME:-orders-db}
+      - GF_DATABASE_USER=${DB_USERNAME:-postgres}
+      - GF_DATABASE_PASSWORD=${DB_PASSWORD:-postgres}
 
 volumes:
   postgres-data:

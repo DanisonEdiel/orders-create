@@ -26,7 +26,7 @@ public class MockOrderEventPublisher extends OrderEventPublisher {
 
     @Override
     public void publishOrderCreatedEvent(Order order) {
-        log.info("MOCK: Publishing OrderCreated event for order: {}", order.getOrderId());
+        log.info("MOCK: Publishing OrderCreated event for order: {}", order.getId());
         log.info("MOCK: Event details: userId={}, totalPrice={}, createdAt={}", 
                 order.getUserId(), order.getTotalPrice(), order.getCreatedAt());
         log.info("MOCK: Successfully published OrderCreated event");

@@ -36,11 +36,11 @@ public class OrderController {
     public ResponseEntity<?> createOrder(@RequestBody CreateOrderRequest request) {
         log.info("Received order creation request");
         var order = orderService.createOrder(request);
-        log.info("Created order with ID: {}", order.getOrderId());
+        log.info("Created order with ID: {}", order.getId());
         orderEventPublisher.publishOrderCreatedEvent(order);
         return ResponseEntity.status(HttpStatus.CREATED)
             .body(Map.of(
-                "orderId", order.getOrderId(),
+                "orderId", order.getId(),
                 "status", "CREATED",
                 "message", "Order created successfully."
             ));

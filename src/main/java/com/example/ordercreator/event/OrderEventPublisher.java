@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -31,7 +32,7 @@ public class OrderEventPublisher {
             var event = new OrderCreatedEvent(order);
             var message = objectMapper.writeValueAsString(event);
             
-            log.info("Publishing OrderCreated event for order: {}", order.getOrderId());
+            log.info("Publishing OrderCreated event for order: {}", order.getId());
             
             snsClient.publish(new PublishRequest()
                 .withTopicArn(orderCreatedTopicArn)
@@ -53,14 +54,14 @@ public class OrderEventPublisher {
     }
 
     private record OrderCreatedEvent(
-        String orderId,
-        String userId,
+        UUID orderId,
+        UUID userId,
         BigDecimal totalPrice,
         LocalDateTime createdAt
     ) {
         public OrderCreatedEvent(Order order) {
             this(
-                order.getOrderId(),
+                order.getId(),
                 order.getUserId(),
                 order.getTotalPrice(),
                 order.getCreatedAt()

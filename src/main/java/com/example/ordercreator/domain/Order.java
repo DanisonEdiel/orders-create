@@ -8,6 +8,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 
 @Data
 @NoArgsConstructor
@@ -16,14 +17,12 @@ import java.util.Set;
 @Table(name = "orders")
 public class Order {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(columnDefinition = "uuid")
+    private UUID id;
 
-    @Column(nullable = false, name = "order_id")
-    private String orderId;
-
-    @Column(nullable = false, name = "user_id")
-    private String userId;
+    @Column(nullable = false, name = "user_id", columnDefinition = "uuid")
+    private UUID userId;
 
     @Column(nullable = false)
     private String status;
@@ -38,8 +37,7 @@ public class Order {
     private Set<OrderItem> items = new HashSet<>();
 
     public Order(String userId) {
-        this.userId = userId;
-        this.orderId = "ORD-" + System.currentTimeMillis();
+        this.userId = UUID.fromString(userId);
         this.createdAt = LocalDateTime.now();
         this.status = "PENDING";
         this.totalPrice = BigDecimal.ZERO;

@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
+import java.util.UUID;
 import java.math.BigDecimal;
 
 @Data
@@ -13,11 +14,12 @@ import java.math.BigDecimal;
 @Table(name = "order_items")
 public class OrderItem {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(columnDefinition = "uuid")
+    private UUID id;
 
-    @Column(nullable = false, name = "order_id")
-    private String orderId;
+    @Column(name = "order_id", columnDefinition = "uuid", insertable = false, updatable = false)
+    private UUID orderId;
 
     @Column(nullable = false, name = "product_name")
     private String productName;
@@ -29,12 +31,12 @@ public class OrderItem {
     private BigDecimal unitPrice;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "order_id", insertable = false, updatable = false)
+    @JoinColumn(name = "order_id")
     private Order order;
 
     public OrderItem setOrder(Order order) {
         this.order = order;
-        this.orderId = order.getOrderId();
+        this.orderId = order.getId();
         return this;
     }
 }

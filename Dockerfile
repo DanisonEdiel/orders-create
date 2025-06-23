@@ -1,15 +1,16 @@
 FROM eclipse-temurin:21-jdk-alpine AS build
 WORKDIR /workspace/app
 
-COPY gradlew .
-COPY gradlew.bat .
-COPY gradle gradle
+# Instalar Gradle
+RUN apk add --no-cache gradle
+
+# Copiar archivos del proyecto
 COPY build.gradle .
 COPY settings.gradle .
 COPY src src
 
-RUN chmod +x ./gradlew
-RUN ./gradlew build -x test
+# Construir el proyecto
+RUN gradle build -x test
 RUN mkdir -p build/dependency && (cd build/dependency; jar -xf ../libs/*.jar)
 
 FROM eclipse-temurin:21-jre-alpine

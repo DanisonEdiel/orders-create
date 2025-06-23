@@ -2,9 +2,9 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, master ]
 
 jobs:
   build:
@@ -19,45 +19,42 @@ jobs:
       with:
         java-version: '21'
         distribution: 'temurin'
-        cache: maven
+        cache: gradle
         
-    - name: Cache Maven packages
+    - name: Cache Gradle packages
       uses: actions/cache@v3
       with:
-        path: ~/.m2
-        key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
-        restore-keys: ${{ runner.os }}-m2
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+        restore-keys: |
+          ${{ runner.os }}-gradle-
         
-    - name: Build with Maven
-      run: mvn -B clean verify
+    - name: Build with Gradle
+      run: ./gradlew build
       
-    - name: Code Quality Analysis
-      run: |
-        mvn checkstyle:checkstyle
-        mvn pmd:pmd
-        mvn spotbugs:spotbugs
-        
     - name: Run Tests
-      run: mvn test
+      run: ./gradlew test
       
     - name: Save Test Results
       uses: actions/upload-artifact@v3
       with:
         name: test-results
-        path: target/surefire-reports
+        path: build/reports/tests
       if: always()
       
     - name: Save Code Coverage
       uses: actions/upload-artifact@v3
       with:
         name: coverage-report
-        path: target/site/jacoco
+        path: build/reports/jacoco
       if: success()
 
   publish:
     name: Publish Docker image
     needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
     runs-on: ubuntu-latest
     
     steps:
@@ -78,45 +75,7 @@ jobs:
         context: .
         push: true
         tags: |
-          ${{ secrets.DOCKERHUB_USERNAME }}/order-creator:latest
-          ${{ secrets.DOCKERHUB_USERNAME }}/order-creator:${{ github.sha }}
-        cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/order-creator:latest
+          ${{ secrets.DOCKERHUB_USERNAME }}/orders-creator:latest
+          ${{ secrets.DOCKERHUB_USERNAME }}/orders-creator:${{ github.sha }}
+        cache-from: type=registry,ref=${{ secrets.DOCKERHUB_USERNAME }}/orders-creator:latest
         cache-to: type=inline
-        
-  deploy:
-    name: Deploy to AWS
-    needs: publish
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    
-    steps:
-    - uses: actions/checkout@v3
-    
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v2
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ secrets.AWS_REGION }}
-        
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v2
-      with:
-        terraform_version: 1.5.7
-        
-    - name: Terraform Init
-      run: terraform init
-      working-directory: ./terraform
-      
-    - name: Terraform Validate
-      run: terraform validate
-      working-directory: ./terraform
-      
-    - name: Terraform Plan
-      run: terraform plan -var="image_tag=${{ github.sha }}" -var="docker_username=${{ secrets.DOCKERHUB_USERNAME }}"
-      working-directory: ./terraform
-      
-    - name: Terraform Apply
-      if: github.ref == 'refs/heads/main'
-      run: terraform apply -auto-approve -var="image_tag=${{ github.sha }}" -var="docker_username=${{ secrets.DOCKERHUB_USERNAME }}"
-      working-directory: ./terraform

@@ -27,6 +27,7 @@ jobs:
           context: .
           push: true
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/orders-creator:latest
+          no-cache: true
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@master
@@ -86,7 +87,7 @@ jobs:
                 env_file:
                   - .env
                 healthcheck:
-                  test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+                  test: ["CMD", "curl", "-f", "http://localhost:8080/api/actuator/health"]
                   interval: 30s
                   timeout: 10s
                   retries: 3
@@ -129,8 +130,8 @@ jobs:
             
             networks:
               default:
-                external: true
-                name: \${NETWORK_NAME:-orders-network}
+                external: false
+                name: orders-network
             EOL
             
             # Create network if it doesn't exist
@@ -139,8 +140,8 @@ jobs:
             # Stop and remove existing containers
             sudo docker-compose down
             
-            # Start the service
-            sudo docker-compose up -d
+            # Start the service with --force-recreate to ensure new images are used
+            sudo docker-compose up -d --force-recreate
             
             # Clean up old images
             sudo docker image prune -af

@@ -44,7 +44,8 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/orders-creator:latest
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/orders-creator:latest,${{ secrets.DOCKERHUB_USERNAME }}/orders-creator:${{ github.sha }}
+          no-cache: true
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@master
@@ -53,61 +54,28 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            # Debug information
-            echo "Starting deployment on $(hostname) at $(date)"
-            echo "Current directory: $(pwd)"
-
-            # Create project directory if it doesn't exist
-            mkdir -p ~/orders-creator
             cd ~/orders-creator
-            echo "Changed to directory: $(pwd)"
-
-            # Install Docker if not installed
-            if ! command -v docker &> /dev/null; then
-              echo "Installing Docker..."
-              sudo apt-get update
-              sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common
-              curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-              sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-              sudo apt-get update
-              sudo apt-get install -y docker-ce
-              sudo systemctl enable docker
-              sudo systemctl start docker
-              sudo usermod -aG docker $USER
-            else
-              echo "Docker is already installed: $(docker --version)"
-            fi
-
-            # Install Docker Compose if not installed
-            if ! command -v docker-compose &> /dev/null; then
-              echo "Installing Docker Compose..."
-              sudo curl -L "https://github.com/docker/compose/releases/download/v2.18.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-              sudo chmod +x /usr/local/bin/docker-compose
-              sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
-            else
-              echo "Docker Compose is already installed: $(docker-compose --version)"
-            fi
-
-            # Pull the latest Docker image
-            echo "Pulling latest Docker image..."
+            
+            # Forzar eliminación de contenedores e imágenes
+            sudo docker-compose down
+            sudo docker rm -f orders-creator orders-db orders-grafana || true
+            sudo docker rmi -f ${{ secrets.DOCKERHUB_USERNAME }}/orders-creator:latest || true
+            
+            # Forzar pull de la imagen más reciente
             sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/orders-creator:latest
-            echo "Image pulled successfully"
-
-            # Create .env file with secrets
-            echo "Creating .env file..."
+            
+            # Crear .env file con secretos
             cat > .env << EOL
             DB_URL=${{ secrets.DB_URL }}
             DB_USERNAME=${{ secrets.DB_USERNAME }}
             DB_PASSWORD=${{ secrets.DB_PASSWORD }}
             ORDER_CREATED_TOPIC_ARN=${{ secrets.ORDER_CREATED_TOPIC_ARN }}
             EOL
-            echo ".env file created"
-
-            # Create or update docker-compose.yml
-            echo "Creating docker-compose.yml file..."
+            
+            # Crear o actualizar docker-compose.yml
             cat > docker-compose.yml << EOL
             version: '3.8'
-
+            
             services:
               orders-creator:
                 image: ${{ secrets.DOCKERHUB_USERNAME }}/orders-creator:latest
@@ -117,15 +85,9 @@ jobs:
                   - "8080:8080"
                 env_file:
                   - .env
-                healthcheck:
-                  test: ["CMD", "curl", "-f", "http://localhost:8080/api/actuator/health"]
-                  interval: 30s
-                  timeout: 10s
-                  retries: 3
-                  start_period: 10s
                 networks:
                   - orders-network
-
+              
               postgres:
                 image: postgres:14
                 container_name: orders-db
@@ -138,14 +100,9 @@ jobs:
                   - "5432:5432"
                 volumes:
                   - postgres-data:/var/lib/postgresql/data
-                healthcheck:
-                  test: ["CMD", "pg_isready", "-U", "postgres"]
-                  interval: 5s
-                  timeout: 5s
-                  retries: 5
                 networks:
                   - orders-network
-
+              
               grafana:
                 image: grafana/grafana
                 container_name: orders-grafana
@@ -160,41 +117,21 @@ jobs:
                   - grafana-data:/var/lib/grafana
                 networks:
                   - orders-network
-
+            
             volumes:
               postgres-data:
               grafana-data:
-
+            
             networks:
               orders-network:
                 name: orders-network
             EOL
-            echo "docker-compose.yml file created"
-
-            # Create network if it doesn't exist
-            echo "Creating Docker network if it doesn't exist..."
+            
+            # Crear red si no existe
             sudo docker network inspect orders-network >/dev/null 2>&1 || sudo docker network create orders-network
-            echo "Network check/creation completed"
-
-            # Stop and remove existing containers
-            echo "Stopping existing containers..."
-            sudo docker-compose down
-            echo "Existing containers stopped"
-
-            # Start the service with verbose output
-            echo "Starting services..."
+            
+            # Iniciar servicios con recreación forzada
             sudo docker-compose up -d --force-recreate
-            echo "Services started"
-
-            # Show running containers
-            echo "Currently running containers:"
+            
+            # Mostrar contenedores en ejecución
             sudo docker ps
-
-            # Show logs from the orders-creator container
-            echo "Logs from orders-creator container:"
-            sudo docker logs orders-creator || echo "No logs available for orders-creator"
-
-            # Clean up old images
-            echo "Cleaning up old images..."
-            sudo docker image prune -af
-            echo "Deployment completed at $(date)"

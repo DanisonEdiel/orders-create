@@ -31,10 +31,13 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-gradle-
         
-    - name: Install Gradle
+    - name: Install Gradle 8.5
       run: |
-        sudo apt-get update
-        sudo apt-get install -y gradle
+        wget -q https://services.gradle.org/distributions/gradle-8.5-bin.zip
+        unzip -q gradle-8.5-bin.zip
+        export PATH=$PWD/gradle-8.5/bin:$PATH
+        echo "PATH=$PWD/gradle-8.5/bin:$PATH" >> $GITHUB_ENV
+        gradle --version
         
     - name: Build with Gradle
       run: gradle build -x test

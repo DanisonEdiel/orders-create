@@ -31,11 +31,16 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-gradle-
         
+    - name: Install Gradle
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y gradle
+        
     - name: Build with Gradle
-      run: ./gradlew build
+      run: gradle build -x test
       
     - name: Run Tests
-      run: ./gradlew test
+      run: gradle test
       
     - name: Save Test Results
       uses: actions/upload-artifact@v4

@@ -42,7 +42,7 @@ public class OrderController {
             .body(Map.of(
                 "orderId", order.getOrderId(),
                 "status", "CREATED",
-                "message", "Order created successfully."
+                "message", "Order created successfully"
             ));
     }
 }

@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  orders-creator:
+    image: danielsoneliel/orders-creator:latest
+    container_name: orders-creator
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_URL=jdbc:postgresql://postgres:5432/orders-create
+      - DB_USERNAME=${DB_USERNAME:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-mock-access-key}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-mock-secret-key}
+      - AWS_REGION=${AWS_REGION:-us-east-1}
+      - ORDER_CREATED_TOPIC_ARN=${ORDER_CREATED_TOPIC_ARN:-arn:aws:sns:us-east-1:000000000000:mock-order-created}
+    depends_on:
+      - postgres
+      - localstack
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  postgres:
+    image: postgres:14
+    container_name: orders-db
+    environment:
+      POSTGRES_DB: ${DB_NAME:-orders-create}
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  localstack:
+    image: localstack/localstack
+    container_name: orders-localstack
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=sns,cloudwatch,logs
+      - DEFAULT_REGION=us-east-1
+      - HOSTNAME_EXTERNAL=localstack
+    volumes:
+      - localstack-data:/tmp/localstack
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    
+  wiremock:
+    image: wiremock/wiremock
+    container_name: orders-wiremock
+    ports:
+      - "8888:8080"
+    volumes:
+      - ./wiremock:/home/wiremock
+    command:
+      - --verbose
+      - --global-response-templating
+    
+  grafana:
+    image: grafana/grafana
+    container_name: orders-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-postgresql-datasource
+      # Direct PostgreSQL connection for metrics
+      - GF_DATABASE_TYPE=postgres
+      - GF_DATABASE_HOST=postgres
+      - GF_DATABASE_NAME=${DB_NAME:-orders-create}
+      - GF_DATABASE_USER=${DB_USERNAME:-postgres}
+      - GF_DATABASE_PASSWORD=${DB_PASSWORD:-postgres}
+
+volumes:
+  postgres-data:
+  localstack-data:
+  grafana-data:

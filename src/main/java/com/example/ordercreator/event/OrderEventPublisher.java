@@ -55,7 +55,7 @@ public class OrderEventPublisher {
 
     private record OrderCreatedEvent(
         UUID orderId,
-        UUID userId,
+        String userId,
         BigDecimal totalPrice,
         LocalDateTime createdAt
     ) {

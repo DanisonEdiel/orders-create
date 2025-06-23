@@ -21,8 +21,8 @@ public class Order {
     @Column(columnDefinition = "uuid")
     private UUID id;
 
-    @Column(nullable = false, name = "user_id", columnDefinition = "uuid")
-    private UUID userId;
+    @Column(nullable = false, name = "user_id")
+    private String userId;
 
     @Column(nullable = false)
     private String status;
@@ -32,15 +32,19 @@ public class Order {
 
     @Column(nullable = false, name = "created_at")
     private LocalDateTime createdAt;
+    
+    @Column(nullable = false, name = "order_id")
+    private String orderId;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<OrderItem> items = new HashSet<>();
 
     public Order(String userId) {
-        this.userId = UUID.fromString(userId);
+        this.userId = userId;
         this.createdAt = LocalDateTime.now();
         this.status = "PENDING";
         this.totalPrice = BigDecimal.ZERO;
+        this.orderId = UUID.randomUUID().toString();
     }
 
     public Order addItem(OrderItem item) {

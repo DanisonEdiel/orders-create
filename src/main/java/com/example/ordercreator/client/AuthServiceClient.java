@@ -10,5 +10,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 public interface AuthServiceClient {
 
     @PostMapping("${auth.service.validate-endpoint}")
+    // test
     TokenValidationResponse validateToken(@RequestBody TokenValidationRequest request);
 }

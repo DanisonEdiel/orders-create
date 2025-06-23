@@ -53,9 +53,14 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            # Debug information
+            echo "Starting deployment on $(hostname) at $(date)"
+            echo "Current directory: $(pwd)"
+
             # Create project directory if it doesn't exist
             mkdir -p ~/orders-creator
             cd ~/orders-creator
+            echo "Changed to directory: $(pwd)"
 
             # Install Docker if not installed
             if ! command -v docker &> /dev/null; then
@@ -69,6 +74,8 @@ jobs:
               sudo systemctl enable docker
               sudo systemctl start docker
               sudo usermod -aG docker $USER
+            else
+              echo "Docker is already installed: $(docker --version)"
             fi
 
             # Install Docker Compose if not installed
@@ -77,20 +84,27 @@ jobs:
               sudo curl -L "https://github.com/docker/compose/releases/download/v2.18.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
               sudo chmod +x /usr/local/bin/docker-compose
               sudo ln -s /usr/local/bin/docker-compose /usr/bin/docker-compose
+            else
+              echo "Docker Compose is already installed: $(docker-compose --version)"
             fi
 
             # Pull the latest Docker image
+            echo "Pulling latest Docker image..."
             sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/orders-creator:latest
+            echo "Image pulled successfully"
 
             # Create .env file with secrets
+            echo "Creating .env file..."
             cat > .env << EOL
             DB_URL=${{ secrets.DB_URL }}
             DB_USERNAME=${{ secrets.DB_USERNAME }}
             DB_PASSWORD=${{ secrets.DB_PASSWORD }}
             ORDER_CREATED_TOPIC_ARN=${{ secrets.ORDER_CREATED_TOPIC_ARN }}
             EOL
+            echo ".env file created"
 
             # Create or update docker-compose.yml
+            echo "Creating docker-compose.yml file..."
             cat > docker-compose.yml << EOL
             version: '3.8'
 
@@ -109,6 +123,8 @@ jobs:
                   timeout: 10s
                   retries: 3
                   start_period: 10s
+                networks:
+                  - orders-network
 
               postgres:
                 image: postgres:14
@@ -127,6 +143,8 @@ jobs:
                   interval: 5s
                   timeout: 5s
                   retries: 5
+                networks:
+                  - orders-network
 
               grafana:
                 image: grafana/grafana
@@ -140,25 +158,43 @@ jobs:
                   - GF_INSTALL_PLUGINS=grafana-postgresql-datasource
                 volumes:
                   - grafana-data:/var/lib/grafana
+                networks:
+                  - orders-network
 
             volumes:
               postgres-data:
               grafana-data:
 
             networks:
-              default:
-                external: true
-                name: \${NETWORK_NAME:-orders-network}
+              orders-network:
+                name: orders-network
             EOL
+            echo "docker-compose.yml file created"
 
             # Create network if it doesn't exist
+            echo "Creating Docker network if it doesn't exist..."
             sudo docker network inspect orders-network >/dev/null 2>&1 || sudo docker network create orders-network
+            echo "Network check/creation completed"
 
             # Stop and remove existing containers
+            echo "Stopping existing containers..."
             sudo docker-compose down
+            echo "Existing containers stopped"
 
-            # Start the service
-            sudo docker-compose up -d
+            # Start the service with verbose output
+            echo "Starting services..."
+            sudo docker-compose up -d --force-recreate
+            echo "Services started"
+
+            # Show running containers
+            echo "Currently running containers:"
+            sudo docker ps
+
+            # Show logs from the orders-creator container
+            echo "Logs from orders-creator container:"
+            sudo docker logs orders-creator || echo "No logs available for orders-creator"
 
             # Clean up old images
+            echo "Cleaning up old images..."
             sudo docker image prune -af
+            echo "Deployment completed at $(date)"

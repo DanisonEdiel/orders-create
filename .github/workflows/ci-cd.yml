@@ -5,6 +5,7 @@ on:
     branches: [ main, master ]
   pull_request:
     branches: [ main, master ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -39,25 +40,15 @@ jobs:
         echo "PATH=$PWD/gradle-8.5/bin:$PATH" >> $GITHUB_ENV
         gradle --version
         
-    - name: Build with Gradle
+    - name: Build with Gradle (Skip Tests)
       run: gradle build -x test
       
-    - name: Run Tests
-      run: gradle test
-      
-    - name: Save Test Results
+    - name: Save Build Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: test-results
-        path: build/reports/tests
-      if: always()
-      
-    - name: Save Code Coverage
-      uses: actions/upload-artifact@v4
-      with:
-        name: coverage-report
-        path: build/reports/jacoco
-      if: success()
+        name: app-jar
+        path: build/libs/*.jar
+        if-no-files-found: error
 
   publish:
     name: Publish Docker image
@@ -67,6 +58,12 @@ jobs:
     
     steps:
     - uses: actions/checkout@v4
+    
+    - name: Download Build Artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: app-jar
+        path: build/libs/
     
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3

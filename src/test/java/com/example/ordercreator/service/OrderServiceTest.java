@@ -5,7 +5,6 @@ import com.example.ordercreator.domain.OrderItem;
 import com.example.ordercreator.dto.CreateOrderItemRequest;
 import com.example.ordercreator.dto.CreateOrderRequest;
 import com.example.ordercreator.event.OrderEventPublisher;
-import com.example.ordercreator.repository.OrderItemRepository;
 import com.example.ordercreator.repository.OrderRepository;
 import com.example.ordercreator.security.UserPrincipal;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,6 +22,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -33,9 +33,6 @@ public class OrderServiceTest {
 
     @Mock
     private OrderRepository orderRepository;
-
-    @Mock
-    private OrderItemRepository orderItemRepository;
 
     @Mock
     private OrderEventPublisher eventPublisher;
@@ -52,17 +49,16 @@ public class OrderServiceTest {
     @Captor
     private ArgumentCaptor<Order> orderCaptor;
 
-    @Captor
-    private ArgumentCaptor<List<OrderItem>> orderItemsCaptor;
-
     private UserPrincipal userPrincipal;
     private CreateOrderRequest createOrderRequest;
     private String expectedUserId = "user-123";
 
     @BeforeEach
     public void setup() {
-        userPrincipal = new UserPrincipal(expectedUserId, "user@example.com", 
-                Collections.singletonList("ROLE_USER"));
+        userPrincipal = new UserPrincipal();
+        userPrincipal.setUserId(expectedUserId);
+        userPrincipal.setEmail("user@example.com");
+        userPrincipal.setRoles(Collections.singletonList("ROLE_USER"));
 
         createOrderRequest = new CreateOrderRequest();
         CreateOrderItemRequest item1 = new CreateOrderItemRequest();
@@ -86,8 +82,9 @@ public class OrderServiceTest {
         when(securityContext.getAuthentication()).thenReturn(authentication);
         when(authentication.getPrincipal()).thenReturn(userPrincipal);
         
-        Order savedOrder = new Order();
-        savedOrder.setOrderId("order-123");
+        Order savedOrder = new Order(expectedUserId);
+        UUID orderId = UUID.randomUUID();
+        savedOrder.setId(orderId);
         when(orderRepository.save(any(Order.class))).thenReturn(savedOrder);
         
         // When
@@ -97,19 +94,16 @@ public class OrderServiceTest {
         verify(orderRepository).save(orderCaptor.capture());
         Order capturedOrder = orderCaptor.getValue();
         
-        assertEquals(expectedUserId, capturedOrder.getUserId());
-        assertNotNull(capturedOrder.getOrderId());
+        assertEquals(UUID.fromString(expectedUserId), capturedOrder.getUserId());
+        assertNotNull(capturedOrder.getId());
         assertEquals(BigDecimal.valueOf(51.97), capturedOrder.getTotalPrice());
         assertNotNull(capturedOrder.getCreatedAt());
         
-        verify(orderItemRepository).saveAll(orderItemsCaptor.capture());
-        List<OrderItem> capturedItems = orderItemsCaptor.getValue();
-        
-        assertEquals(2, capturedItems.size());
-        assertEquals("Product A", capturedItems.get(0).getProductName());
-        assertEquals(2, capturedItems.get(0).getQuantity());
-        assertEquals(BigDecimal.valueOf(10.99), capturedItems.get(0).getUnitPrice());
-        assertEquals("Product B", capturedItems.get(1).getProductName());
+        assertEquals(2, capturedOrder.getItems().size());
+        OrderItem firstItem = capturedOrder.getItems().iterator().next();
+        assertEquals("Product A", firstItem.getProductName());
+        assertEquals(2, firstItem.getQuantity());
+        assertEquals(BigDecimal.valueOf(10.99), firstItem.getUnitPrice());
         
         verify(eventPublisher).publishOrderCreatedEvent(savedOrder);
     }
@@ -127,7 +121,6 @@ public class OrderServiceTest {
         
         assertEquals("No authenticated user found", exception.getMessage());
         verify(orderRepository, never()).save(any());
-        verify(orderItemRepository, never()).saveAll(any());
         verify(eventPublisher, never()).publishOrderCreatedEvent(any());
     }
 }

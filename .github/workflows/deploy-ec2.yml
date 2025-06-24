@@ -61,15 +61,15 @@ jobs:
           script: |
             cd ~/orders-creator
             
-            # Forzar eliminación de contenedores e imágenes
+            # Force removal of containers and image
             sudo docker-compose down
             sudo docker rm -f orders-creator orders-db orders-grafana || true
             sudo docker rmi -f ${{ secrets.DOCKERHUB_USERNAME }}/orders-creator:latest || true
             
-            # Forzar pull de la imagen más reciente
+            # Force pull of latest image
             sudo docker pull ${{ secrets.DOCKERHUB_USERNAME }}/orders-creator:latest
             
-            # Crear .env file con secretos
+            # Create .env file with secrets
             cat > .env << EOL
             DB_URL=${{ secrets.DB_URL }}
             DB_USERNAME=${{ secrets.DB_USERNAME }}
@@ -77,7 +77,7 @@ jobs:
             ORDER_CREATED_TOPIC_ARN=${{ secrets.ORDER_CREATED_TOPIC_ARN }}
             EOL
             
-            # Crear o actualizar docker-compose.yml
+            # Create or update docker-compose.yml
             cat > docker-compose.yml << EOL
             version: '3.8'
             
@@ -132,11 +132,11 @@ jobs:
                 name: orders-network
             EOL
             
-            # Crear red si no existe
+            # Create network if it doesn't exist
             sudo docker network inspect orders-network >/dev/null 2>&1 || sudo docker network create orders-network
             
-            # Iniciar servicios con recreación forzada
+            # Start services with forced recreation
             sudo docker-compose up -d --force-recreate
             
-            # Mostrar contenedores en ejecución
+            # Show running containers
             sudo docker ps
